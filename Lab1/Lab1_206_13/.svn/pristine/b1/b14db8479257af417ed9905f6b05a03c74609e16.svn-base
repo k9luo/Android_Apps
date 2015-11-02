@@ -1,0 +1,100 @@
+package ca.uwaterloo.lab1_206_13;
+
+import ca.uwaterloo.lab1_206_13.R;
+import ca.uwaterloo.lab1_206_13.AccelerometerEventListener;
+import ca.uwaterloo.lab1_206_13.LightSensorEventListener;
+import android.support.v7.app.ActionBarActivity;
+import android.support.v4.app.Fragment;
+import android.hardware.Sensor;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+public class MainActivity extends ActionBarActivity {
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+
+		if (savedInstanceState == null) {
+			getSupportFragmentManager().beginTransaction()
+					.add(R.id.container, new PlaceholderFragment()).commit();
+		}
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.main, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle action bar item clicks here. The action bar will
+		// automatically handle clicks on the Home/Up button, so long
+		// as you specify a parent activity in AndroidManifest.xml.
+		int id = item.getItemId();
+		if (id == R.id.action_settings) {
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+
+	/**
+	 * A placeholder fragment containing a simple view.
+	 */
+	public static class PlaceholderFragment extends Fragment {
+
+		public PlaceholderFragment() {
+		}
+
+		@Override
+		public View onCreateView(LayoutInflater inflater, ViewGroup container,
+				Bundle savedInstanceState) {
+			View rootView = inflater.inflate(R.layout.fragment_main, container,
+					false);
+			LinearLayout l = (LinearLayout) rootView.findViewById(R.id.label1);
+			l.setOrientation(LinearLayout.VERTICAL);
+			createLabel(rootView, l, "Lab 1: Sensor Data");
+			TextView lightValue = createLabel(rootView, l, "");
+			TextView accelarationValue = createLabel(rootView, l, "");
+			
+			SensorManager sensorManager = (SensorManager)
+					rootView.getContext().getSystemService(SENSOR_SERVICE);
+			
+			//light sensor
+			Sensor lightSensor =
+					sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+			SensorEventListener light = new LightSensorEventListener(lightValue);
+			sensorManager.registerListener(light, lightSensor, SensorManager.SENSOR_DELAY_NORMAL);
+			
+			//accelerometer
+			Sensor accelerometer = 
+					sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+			SensorEventListener accelaration = new AccelerometerEventListener(accelarationValue);
+			sensorManager.registerListener(accelaration, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+			
+			return rootView;
+		}
+		
+		private TextView createLabel(View rootView, LinearLayout l, String labelName){
+			TextView tv = new TextView(rootView.getContext());
+			tv.setText(labelName);
+			l.addView(tv);
+			
+			return tv;
+			
+		}
+	}
+
+}

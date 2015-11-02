@@ -1,0 +1,224 @@
+package ca.uwaterloo.lab4_206_13;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import android.graphics.PointF;
+import android.util.Log;
+import android.widget.TextView;
+import mapper.InterceptPoint;
+import mapper.LabeledPoint;
+import mapper.MapView;
+import mapper.NavigationalMap;
+import mapper.PositionListener;
+
+public class PositionHandler implements PositionListener{
+	
+	//private PointF ori, dest;
+	private List<InterceptPoint> intercept;
+	private static List<PointF> designedPath = new ArrayList<PointF>();
+	private static NavigationalMap nm;
+	public static final float stepLength = 0.5f ;
+	private final int NORTH = 0;
+	private final int SOUTH = 1;
+	private final int EAST = 2;
+	private final int WEST = 3;
+	private final float TOLERANCE = 0.5f;
+	private PointF orig;
+	private PointF dest;
+	private static Instruction instantInstruction;
+	private static TextView in;
+	private static TextView orig_dest;
+	
+	@Override
+	public void originChanged(MapView source, PointF loc) {
+		this.orig = loc;
+		this.dest = source.getDestinationPoint();
+		
+		nm = MainActivity.getNavigationalMap();
+		
+		source.setUserPoint(loc);	
+		source.clearUserPath();
+		
+		hasDrawnStraightWay(source);
+	}
+
+	@Override
+	public void destinationChanged(MapView source, PointF dest) {
+		this.orig = source.getOriginPoint();
+		this.dest = dest;
+		nm = MainActivity.getNavigationalMap();
+		orig_dest.setText(String.format("Origin: (%,3.1f, %,3.1f) \nDestination: (%,3.1f, %,3.1f)", orig.x, orig.y, dest.x, dest.y));
+		
+		//clear the old path to avoid invalid new line between the same reference points
+		source.clearUserPath();
+		source.removeAllLabeledPoints();
+		designedPath.clear();
+				
+		if (!hasDrawnStraightWay(source)){
+			
+			designIndirectPath(source);
+		}
+		
+		generateInstructions(NonLinearAccelerometerListener.getOrientation());
+	}
+	
+	private boolean hasDrawnStraightWay(MapView source){
+		intercept = nm.calculateIntersections(this.orig, this.dest);
+		if(intercept.isEmpty()){
+			designedPath.add(this.orig);
+			designedPath.add(this.dest);
+			source.setUserPath(designedPath);
+			return true;
+		} 
+		return false;
+	}
+	
+	private void designIndirectPath(MapView source){
+				
+		designedPath.add(this.orig);
+		
+		boolean finalIsFound = false;
+		
+		do{
+			PointF inter = nm.calculateIntersections(designedPath.get(designedPath.size() - 1), dest).get(0).getPoint();
+			designedPath.add(wallBuffer(designedPath.get(designedPath.size() - 1), inter));
+			PointF validPoint = designedPath.get(designedPath.size() - 1);
+			
+			for (int i = 0; i < 4; i++){
+				LabeledPoint testingPoint= decisionMaking(i, designedPath.get(designedPath.size() - 1));
+							
+				if (testingPoint.getLabel().equals("finalValid")){
+					designedPath.add(testingPoint.getPoint());
+					finalIsFound = true;
+					break;
+				} 
+				
+				if (testingPoint.getLabel().equals("valid")){
+					if (interceptToDest(testingPoint.getPoint()) < interceptToDest(validPoint)){
+						validPoint = testingPoint.getPoint();
+					}
+				}
+			}
+			
+			if(!finalIsFound){			 
+				designedPath.add(validPoint);	
+			}
+		} while (!finalIsFound);
+			
+		designedPath.add(dest);
+		smoothPath();
+		
+		for(PointF turningPoint: designedPath){
+			source.addLabeledPoint(turningPoint, "");
+		}
+		
+		source.setUserPath(designedPath);
+		
+	}
+	
+	private LabeledPoint decisionMaking(int movingDir, PointF firstIntercept){
+		
+		PointF movingPoint;
+		String label = "";
+		int steps = 0;
+		boolean crossingWall = false;
+		boolean changingIntercept = false;
+		boolean freeOfWall = false;
+
+		do{
+			steps++;
+			if (movingDir == NORTH){
+				movingPoint = new PointF(firstIntercept.x, firstIntercept.y - steps * stepLength);
+			} else if (movingDir == SOUTH){
+				movingPoint = new PointF(firstIntercept.x, firstIntercept.y + steps * stepLength);
+			} else if (movingDir == EAST){
+				movingPoint = new PointF(firstIntercept.x + steps * stepLength, firstIntercept.y);
+			} else{
+				//movingDir = WEST
+				movingPoint = new PointF(firstIntercept.x - steps * stepLength, firstIntercept.y);
+			}
+			
+			crossingWall = !nm.calculateIntersections(firstIntercept, movingPoint).isEmpty();
+			freeOfWall = nm.calculateIntersections(movingPoint, this.dest).isEmpty();
+			
+			if (freeOfWall || crossingWall){
+				break;
+			}
+			
+			changingIntercept = (nm.calculateIntersections(movingPoint, this.dest).get(0).getPoint().x - firstIntercept.x) > TOLERANCE;
+								
+		} while(!crossingWall && !freeOfWall && !changingIntercept);
+		
+		if (crossingWall){
+			label = "invalid";
+		} 
+		if (freeOfWall){
+			label = "finalValid";
+		}
+		if (changingIntercept){
+			label = "valid";
+		}
+		
+		return new LabeledPoint(movingPoint, label);
+	}
+	
+	private PointF wallBuffer(PointF start, PointF intercept){
+		
+		float deltaX = intercept.x - start.x;
+		float deltaY = intercept.y - start.y;
+		
+		if (deltaX > 0){
+			deltaX -= stepLength;
+		} else{
+			deltaX += stepLength; 
+		}
+		
+		if (deltaY > 0){
+			deltaY -= stepLength;
+		} else{
+			deltaY += stepLength;
+		}
+			
+		PointF buffer = new PointF(start.x + deltaX, start.y + deltaY);
+		return buffer;
+	}
+	
+	private float interceptToDest(PointF p1){
+		PointF tmpIntercept = nm.calculateIntersections(p1, dest).get(0).getPoint();
+		float distance = (float)Math.abs(tmpIntercept.x - dest.x);
+		return distance;
+	}
+	
+	private void smoothPath(){
+		for(int i = 0; i + 2 < designedPath.size(); i++){
+			boolean removedAll;
+			do{
+				removedAll = true;
+				intercept = nm.calculateIntersections(designedPath.get(i), designedPath.get(i + 2));
+				if (intercept.isEmpty()){
+					designedPath.remove(designedPath.get(i + 1));
+					removedAll = false;
+				}
+			} while (!removedAll && i + 2 < designedPath.size());
+		}
+	}
+	
+	public static void generateInstructions(float currentHeading){
+		if (!designedPath.isEmpty()){
+			instantInstruction = new Instruction(designedPath.get(0), designedPath.get(1), currentHeading);
+			in.setText(instantInstruction.toString());
+		} else{
+			in.setText("");
+		}
+	}
+	
+	public static void setInstructionTextView(TextView in){
+		PositionHandler.in = in;
+	}
+	
+	public static void setOrigDestTextView(TextView od){
+		orig_dest = od;
+	}
+
+}

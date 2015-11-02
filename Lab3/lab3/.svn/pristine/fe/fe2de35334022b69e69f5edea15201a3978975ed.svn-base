@@ -1,0 +1,34 @@
+package ca.uwaterloo.lab3_206_13;
+
+public class StepCounter {
+	private static int steps;
+	private static long start;
+	private static long duration;
+	
+	public static int steps(){return steps;}
+	
+	public static void increment(){
+		steps++;
+		
+	}
+	
+	public static void reset(){
+		steps = 0;
+	}
+
+	public static long getStart() {
+		return start;
+	}
+
+	public static void setStart(long start) {
+		StepCounter.start = start;
+	}
+
+	public static long getDuration() {
+		return duration;
+	}
+
+	public static void setDuration(long duration) {
+		StepCounter.duration = duration;
+	}	
+}

@@ -1,0 +1,80 @@
+package ca.uwaterloo.lab4_206_13;
+
+import mapper.LineSegment;
+import mapper.VectorUtils;
+import android.graphics.PointF;
+
+public class Instruction {
+	private PointF start;
+	private PointF end;
+	private float currentHeading;
+	private final float DEGREEPERPI = 180f;
+	private final float RADIANPERPI = 3.14f;
+	private final float UNITVECTORLENGTH = 1f;
+	private final int RIGHT = 0;
+	private final int LEFT = 1;
+	
+	private float length;
+	private int steps;
+	private LineSegment path;
+	private float turningAngle;
+	private int turningDir;
+	
+	
+	
+	public Instruction(PointF start, PointF end, float currentHeading){
+		this.start = start;
+		this.end = end;
+		this.currentHeading = currentHeading;
+		
+		this.path = new LineSegment(start, end);
+		this.length = path.length();
+		this.steps = (int)(length / PositionHandler.STEPLENGTH);
+		
+		calculateTurningAngle();
+	}
+	
+	public float angleBetweenNorthAndPath(){		
+		PointF NorthPoint = new PointF(start.x, start.y - UNITVECTORLENGTH);
+		float angle = VectorUtils.angleBetween(start, NorthPoint, end);
+		angle = angle/RADIANPERPI * DEGREEPERPI;	//convert to degree
+		if (angle < 0){
+			angle += DEGREEPERPI * 2;	//360 degrees
+		}
+		
+		return angle;
+	}
+	
+	public void calculateTurningAngle(){
+		float pathAngle = angleBetweenNorthAndPath();
+		if(currentHeading > pathAngle){
+			if (currentHeading - pathAngle < 180){
+				turningDir = LEFT;
+				turningAngle = currentHeading - pathAngle;
+			}else {
+				turningDir = RIGHT;
+				turningAngle = DEGREEPERPI * 2 - (currentHeading - pathAngle);
+			}
+		} else{
+			if (pathAngle - currentHeading < 180){
+				turningDir = RIGHT;
+				turningAngle = pathAngle - currentHeading;
+			} else {
+				turningDir = LEFT;
+				turningAngle = DEGREEPERPI * 2 - (pathAngle - currentHeading);
+			}
+		}
+	}
+	
+	@Override
+	public String toString(){
+		String ins;
+		if (turningDir == RIGHT){
+			ins = String.format("Turning right %,4.1f\u00B0, walk forward for %d steps", turningAngle, steps);
+		} else{
+			ins = String.format("Turning left %,4.1f\u00B0, walk forward for %d steps", turningAngle, steps);
+		}
+		
+		return ins;
+	}
+}

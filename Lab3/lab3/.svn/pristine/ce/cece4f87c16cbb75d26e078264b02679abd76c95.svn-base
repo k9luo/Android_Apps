@@ -1,0 +1,51 @@
+package ca.uwaterloo.lab3_206_13;
+
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.widget.TextView;
+
+public class NonLinearAccelerometerListener implements SensorEventListener {
+
+	private static float[] record = new float[3];
+	private float[] R = new float[9];
+	private	float[] I = new float[9];
+	private	float[] orientation = new float[3];
+	TextView display;
+	
+	public NonLinearAccelerometerListener(TextView d){
+		display = d;
+	}
+	
+	@Override
+	public void onSensorChanged(SensorEvent event) {
+		record[0] = event.values[0];
+		record[1] = event.values[1];
+		record[2] = event.values[2]; 
+				
+		SensorManager.getRotationMatrix(R, I, record, MagneticEventListener.getMagneticRecord());
+		SensorManager.getOrientation(R, orientation);
+		
+		for (int i = 0; i < 3; i++){
+			orientation[i] = orientation[i] / 3.14f * 180f;
+			
+			if (orientation[i] < 0){
+				orientation[i] += 360;
+			}
+		}
+		
+		display.setText(String.format("Orientation: (%,5.1f, %,5.1f, %,5.1f)", 
+				orientation[0], orientation[1], orientation[2] ) );
+	}
+
+	@Override
+	public void onAccuracyChanged(Sensor sensor, int accuracy) {
+		// TODO Auto-generated method stub
+
+	}
+
+	public static float[] getAccelerationRecord(){
+		return record;
+	}
+}

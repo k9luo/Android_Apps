@@ -1,0 +1,175 @@
+package ca.uwaterloo.lab4_206_13;
+
+import java.util.Arrays;
+
+import mapper.MapLoader;
+import mapper.MapView;
+import mapper.NavigationalMap;
+import mapper.PositionListener;
+import mapper.VectorUtils;
+import android.app.Activity;
+import android.app.Fragment;
+import android.graphics.PointF;
+import android.hardware.Sensor;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+public class MainActivity extends Activity {
+	
+	private static MapView mv;
+	private PositionListener pl = new PositionHandler();
+	private static NavigationalMap map;
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+
+		if (savedInstanceState == null) {
+			getFragmentManager().beginTransaction()
+					.add(R.id.container, new PlaceholderFragment()).commit();
+		}
+		
+		mv = new MapView (getApplicationContext(), 800, 450 , 35, 35);
+		registerForContextMenu (mv);
+		map = MapLoader.loadMap (getExternalFilesDir(null), "Lab-room-peninsula.svg");
+		mv.setMap (map);
+		mv.addListener(pl);
+	}
+
+	@Override
+	public void onCreateContextMenu ( ContextMenu menu , View v, ContextMenuInfo menuInfo ) {
+		super.onCreateContextMenu (menu , v, menuInfo);
+		mv.onCreateContextMenu (menu , v, menuInfo);
+	}
+	
+	@Override
+	public boolean onContextItemSelected ( MenuItem item ) {
+		return super.onContextItemSelected (item) || mv.onContextItemSelected (item);
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.main, menu);
+		
+		
+		return true;
+	}
+	
+	/*@Override 
+	public void onSaveInstanceState(Bundle savedInstanceState){
+		super.onSaveInstanceState(savedInstanceState);
+	}*/
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle action bar item clicks here. The action bar will
+		// automatically handle clicks on the Home/Up button, so long
+		// as you specify a parent activity in AndroidManifest.xml.
+		int id = item.getItemId();
+		if (id == R.id.action_settings) {
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+	
+	public static NavigationalMap getNavigationalMap(){
+		return map;
+	}
+
+	/**
+	 * A placeholder fragment containing a simple view.
+	 */
+	public static class PlaceholderFragment extends Fragment {
+
+		public PlaceholderFragment() {
+		}
+
+		@Override
+		public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+			View rootView = inflater.inflate(R.layout.fragment_main, container,	false);
+			LinearLayout l = (LinearLayout) rootView.findViewById(R.id.label4);
+			l.setOrientation(LinearLayout.VERTICAL);
+			
+			createLabel(rootView, l, "Lab 3: Displacement Calculator\n");
+			//display the linear acceleration
+			TextView accelarationValue = createLabel(rootView, l, "");
+			
+			//create line graph for accelerometer
+			LineGraphView graph = new LineGraphView(rootView.getContext(), 100, Arrays.asList("x", "y", "z"));
+			l.addView(graph);
+			graph.setVisibility(View.VISIBLE);
+			
+			//display the steps
+			final TextView counter = createLabel(rootView, l, "");
+			
+			//display the orientation
+			TextView orientation = createLabel(rootView, l, "");
+			
+			//add a reset button for steps
+			Button resetButton = new Button(rootView.getContext());
+			resetButton.setText("Clear!");
+			l.addView(resetButton);
+			resetButton.setOnClickListener(new View.OnClickListener() {
+	             public void onClick(View v) {
+	                 DisplacementCounter.reset();
+	             }
+	         });
+			
+			SensorManager sensorManager = (SensorManager)rootView.getContext().getSystemService(SENSOR_SERVICE);
+			//setup acceleration sensor
+			Sensor accelerometer = 
+					sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+			SensorEventListener accelaration = new AccelerometerEventListener(accelarationValue, graph, counter);
+			sensorManager.registerListener(accelaration, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+			//setup nonLinear acceleration sensor
+			Sensor nonLinearA = 
+					sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+			SensorEventListener nonLinearListener = new NonLinearAccelerometerListener(orientation);
+			sensorManager.registerListener(nonLinearListener, nonLinearA, SensorManager.SENSOR_DELAY_NORMAL);
+			//setup magnetic field sensor
+			Sensor magnetic = 
+					sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+			SensorEventListener magneticListener = new MagneticEventListener();
+			sensorManager.registerListener(magneticListener, magnetic, 600000);
+			
+			l.addView(mv);
+			
+			//display instructions
+			TextView instructions = createLabel(rootView, l, "");
+			PositionHandler.setInstructionTextView(instructions);
+			
+			TextView orig_dest = createLabel(rootView, l, "");
+			PositionHandler.setOrigDestTextView(orig_dest);
+			return rootView;
+		}
+		
+		private TextView createLabel(View rootView, LinearLayout l, String labelName){
+			TextView tv = new TextView(rootView.getContext());
+			tv.setText(labelName);
+			l.addView(tv);
+			
+			return tv;
+		}
+		
+		
+		
+	}
+
+	
+
+}

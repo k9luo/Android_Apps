@@ -1,0 +1,49 @@
+package ca.uwaterloo.lab2_206_13;
+
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.widget.TextView;
+
+public class AccelerometerEventListener implements SensorEventListener {
+
+	TextView output;
+	LineGraphView graph;
+    
+	float[] record = new float[2];
+	float[] delta = new float[2];
+    
+	
+	public AccelerometerEventListener (TextView outputView, LineGraphView graph){
+		output = outputView;
+		this.graph = graph;
+		
+	}
+	
+	@Override
+	public void onSensorChanged(SensorEvent event) {
+		if(event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
+			delta [0] = event.values[1] - record[0];
+			delta [1] = event.values[2] - record[1];
+			
+			record[0] += (delta[0]) / 3.5;
+			record[1] += (delta[1]) / 3.5;
+			
+			
+			output.setText(String.format("Linear acceleration on x, y, z axis:\n(%,5.2f, %,5.2f, %,5.2f) in m/s^2", 
+					record[0], record[1], record[2]));
+            
+			graph.addPoint(record);
+		}
+	
+		
+	}
+
+	@Override
+	public void onAccuracyChanged(Sensor sensor, int accuracy) {
+		// TODO Auto-generated method stub
+
+	}
+
+    
+}

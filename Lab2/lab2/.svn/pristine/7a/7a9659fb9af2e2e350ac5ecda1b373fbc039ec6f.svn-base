@@ -1,0 +1,23 @@
+package ca.uwaterloo.lab2_206_13;
+
+public enum AccelerationState {
+	STEADY (true, false, false, false),
+	RISING (false, true, false, true),
+	FALLING (false, false, true, true),
+	NEGATIVE (false, false, false, false);
+	
+	private boolean isZero;
+	private boolean deltaUp;
+	private boolean deltaDown;
+	private boolean isPositive;
+	
+	private AccelerationState(boolean isZ, boolean dU, boolean dD, boolean isP){
+		this.isZero = isZ;
+		this.deltaUp = dU;
+		this.deltaDown = dD;
+		this.isPositive = isP;
+	}
+	
+	
+	
+}

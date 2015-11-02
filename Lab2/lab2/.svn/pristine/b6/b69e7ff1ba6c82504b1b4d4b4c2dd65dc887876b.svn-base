@@ -1,0 +1,39 @@
+package ca.uwaterloo.lab2_206_13;
+
+public enum AccelerationState {
+	//       (isPositive, deltaUp) 
+	PRISING  (true,       true),
+	PFALLING (true,       false),
+	NRISING  (false,      true),
+	NFALLING (false,      false);
+	
+	private boolean isPositive;
+	private boolean deltaUp;
+	
+	
+	private AccelerationState(boolean dU, boolean isP){
+		this.deltaUp = dU;
+		this.isPositive = isP;
+	}
+	
+	public boolean isPositive(){return this.isPositive;}
+	public boolean deltaUp(){return this.deltaUp;}
+	
+	public AccelerationState process(){
+		switch(this){ 
+			case PRISING: 
+				return PFALLING;
+			case PFALLING:
+				return NRISING;
+			case NRISING:
+				return NFALLING;
+			case NFALLING:
+				return PRISING;
+			default:
+				return PRISING;
+		
+		}
+	}
+	
+	
+}

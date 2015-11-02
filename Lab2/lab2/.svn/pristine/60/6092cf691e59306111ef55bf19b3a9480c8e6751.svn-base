@@ -1,0 +1,16 @@
+package ca.uwaterloo.lab2_206_13;
+
+public class StepCounter {
+	static int steps;
+	
+	public static int steps(){return steps;}
+	
+	public static void increment(){
+		steps++;
+	}
+	
+	public static void reset(){
+		steps = 0;
+	}
+	
+}

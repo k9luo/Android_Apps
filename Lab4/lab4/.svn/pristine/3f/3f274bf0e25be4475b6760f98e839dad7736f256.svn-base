@@ -1,0 +1,50 @@
+package ca.uwaterloo.lab4_206_13;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import android.graphics.PointF;
+import mapper.InterceptPoint;
+import mapper.MapView;
+import mapper.NavigationalMap;
+import mapper.PositionListener;
+
+public class PositionHandler implements PositionListener{
+	
+	private PointF ori, dest;
+	private List<InterceptPoint> intercept;
+	private List<PointF> userPath = new ArrayList<PointF>();
+
+	private static NavigationalMap nm = MainActivity.getNavigationalMap();
+	
+	@Override
+	public void originChanged(MapView source, PointF loc) {
+		ori = loc;
+		source.setUserPoint(loc);
+		if (!dest.equals(null)){
+			hasDrawnStraightWay(source);
+		}
+		
+		
+	}
+
+	@Override
+	public void destinationChanged(MapView source, PointF dest) {
+		this.dest = dest;
+		hasDrawnStraightWay(source);
+		
+	}
+	
+	private boolean hasDrawnStraightWay(MapView source){
+		intercept = nm.calculateIntersections(ori, dest);
+		if(intercept.isEmpty()){
+			userPath.add(ori);
+			userPath.add(dest);
+			source.setUserPath(userPath);
+			return true;
+		} 
+		
+		return false;
+	}
+
+}
